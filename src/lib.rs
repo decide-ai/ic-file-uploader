@@ -260,6 +260,7 @@ pub fn upload_chunk_with_config(
         }
     }
 }
+
 /// Uploads multiple chunks with comprehensive error handling and resume capability.
 ///
 /// This is the main high-level function that handles the entire upload process

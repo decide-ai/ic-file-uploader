@@ -34,12 +34,16 @@ struct Args {
     #[arg(short, long, default_value = "0")]
     offset: usize,
 
+    /// Starting chunk index for resume (0-based, optional)
+    #[arg(long, default_value = "0")]
+    chunk_offset: usize,
+
     /// Network type (optional)
     #[arg(short, long)]
     network: Option<String>,
 
     /// Enable autoresume with retry attempts
-    #[arg(short, long)]
+    #[arg(short, long, default_value = "true")]
     autoresume: bool,
 
     /// Maximum retry attempts per chunk (default: 3)
@@ -83,14 +87,17 @@ fn main() -> Result<(), String> {
 
     println!("Total chunks: {}", model_chunks.len());
     if args.offset > 0 {
-        println!("Starting from chunk {}", args.offset + 1);
+        println!("Starting from byte offset: {}", args.offset);
+    }
+    if args.chunk_offset > 0 {
+        println!("Starting from chunk {}", args.chunk_offset + 1);
     }
     if args.autoresume {
         println!("Auto-resume enabled with {} max retries per chunk", args.max_retries);
     }
 
     // Perform the upload
-    match upload_chunks_with_resume(&params, &model_chunks, 0, &config) {
+    match upload_chunks_with_resume(&params, &model_chunks, args.chunk_offset, &config) {
         ChunkUploadResult::Success => {
             println!("✓ Upload completed successfully!");
             Ok(())
