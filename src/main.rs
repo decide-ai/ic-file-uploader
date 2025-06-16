@@ -109,7 +109,7 @@ fn main() -> Result<(), String> {
         ChunkUploadResult::Interrupted { failed_at_chunk, error } => {
             eprintln!("Upload interrupted at chunk {}: {}", failed_at_chunk + 1, error);
             println!("\nTo resume from this point, run:");
-            println!("ic-file-uploader {} {} {} --offset {} --autoresume{}",
+            println!("ic-file-uploader {} {} {} --chunk-offset {} --autoresume{}",
                      args.canister_name,
                      args.canister_method,
                      args.file_path,
