@@ -185,8 +185,9 @@ fn main() -> Result<(), String> {
                  chunks_to_upload.len(),
                  chunks_to_upload[0].chunk_id);
 
+
         // Perform parallel upload
-        match upload_chunks_parallel(&params, chunks_to_upload.clone(), &config) {
+        match upload_chunks_parallel(&params, chunks_to_upload, &config) {
             ParallelUploadResult::Success => {
                 println!("\n✓ All chunks uploaded successfully!");
                 Ok(())
@@ -221,27 +222,6 @@ fn main() -> Result<(), String> {
             }
             ParallelUploadResult::Failed(e) => {
                 println!("\n✗ Upload failed: {}", e);
-
-                // Write all chunk IDs to failed chunks file since everything failed
-                let all_chunk_ids: Vec<u32> = chunks_to_upload.iter().map(|chunk| chunk.chunk_id).collect();
-                let failed_file = format!("{}.failed_chunks", args.file_path);
-
-                match std::fs::write(&failed_file, all_chunk_ids.iter().map(|id| id.to_string()).collect::<Vec<_>>().join(",")) {
-                    Ok(()) => {
-                        println!("\n📝 All chunk IDs written to: {}", failed_file);
-                        println!("To retry all chunks, run:");
-                        println!("ic-file-uploader {} {} {} --parallel --retry-chunks-file {}{}",
-                                 args.canister_name,
-                                 args.canister_method,
-                                 args.file_path,
-                                 failed_file,
-                                 args.network.as_ref().map(|n| format!(" --network {}", n)).unwrap_or_default());
-                    }
-                    Err(write_err) => {
-                        println!("⚠ Could not write failed chunks file: {}", write_err);
-                        println!("All chunk IDs: {}", all_chunk_ids.iter().map(|id| id.to_string()).collect::<Vec<_>>().join(","));
-                    }
-                }
 
                 Err(e)
             }

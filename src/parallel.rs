@@ -80,8 +80,6 @@ struct UploadTracker {
     active_uploads: usize,
     /// Completed chunks
     completed_chunks: Vec<u32>,
-    /// Failed chunks with retry counts
-    retry_counts: HashMap<u32, usize>,
 }
 
 impl UploadTracker {
@@ -91,7 +89,6 @@ impl UploadTracker {
             start_time: Instant::now(),
             active_uploads: 0,
             completed_chunks: Vec::new(),
-            retry_counts: HashMap::new(),
         }
     }
 
@@ -155,59 +152,6 @@ pub fn create_test_format(chunk_id: u32) -> String {
         _ => format!("({}, blob \"\01\02\03\04\"", chunk_id),
     }
 }
-
-/*
-// Alternative approach - more explicit about the escaping:
-pub fn chunk_with_id_to_candid_args_alt(chunk_id: u32, data: &[u8]) -> String {
-    let data_blob: String = data.iter()
-        .map(|&byte| format!("\\{:02X}", byte))
-        .collect();
-    format!("({} : nat32, blob \"{}\")", chunk_id, data_blob)
-}
-*/
-
-/*
-/// Upload a single chunk with ID using dfx
-async fn upload_chunk_with_id(
-    params: &UploadParams<'_>,
-    chunk: &ChunkInfo,
-    config: &ParallelUploadConfig,
-) -> Result<(), String> {
-    let candid_args = chunk_with_id_to_candid_args(chunk.chunk_id, &chunk.data);
-
-    let mut temp_file = NamedTempFile::new()
-        .map_err(|_| create_error_string("Failed to create temporary file"))?;
-
-    temp_file
-        .as_file_mut()
-        .write_all(candid_args.as_ref())
-        .map_err(|_| create_error_string("Failed to write data to temporary file"))?;
-
-    let output = dfx(
-        "canister",
-        "call",
-        &vec![
-            params.canister_name,
-            params.canister_method,
-            "--argument-file",
-            temp_file.path().to_str().ok_or(create_error_string(
-                "temp_file path could not be converted to &str",
-            ))?,
-        ],
-        params.network,
-    )?;
-
-    if output.status.success() {
-        if let Some(callback) = config.progress_callback {
-            callback(chunk.chunk_id, chunk.size, "✓ Uploaded");
-        }
-        Ok(())
-    } else {
-        let error_message = String::from_utf8_lossy(&output.stderr).to_string();
-        Err(create_error_string(&format!("Chunk {} failed: {}", chunk.chunk_id, error_message)))
-    }
-}
-*/
 
 /// Upload a chunk with retry logic
 fn upload_chunk_with_retry(
