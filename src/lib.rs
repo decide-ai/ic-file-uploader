@@ -2,8 +2,9 @@
 //!
 //! It includes utilities for splitting files into chunks, converting data to blob strings,
 //! and interfacing with the `dfx` command-line tool to upload data to canisters.
-
 #![warn(missing_docs)]
+
+pub mod parallel;
 
 use std::process::Command;
 use std::io::Write;
