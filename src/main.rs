@@ -139,7 +139,7 @@ fn main() -> Result<(), String> {
         };
 
         // Convert chunks to ChunkInfo with IDs
-        let chunk_infos = chunks_to_chunk_info(&model_chunks, args.chunk_offset.try_into().unwrap());
+        let chunk_infos = chunks_to_chunk_info(&model_chunks);
 
         // Filter chunks based on retry file or chunk_offset
         let chunks_to_upload: Vec<_> = if let Some(retry_file) = &args.retry_chunks_file {

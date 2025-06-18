@@ -417,12 +417,12 @@ pub fn upload_chunks_parallel(
 /// # Returns
 ///
 /// Vector of ChunkInfo with assigned IDs
-pub fn chunks_to_chunk_info(chunks: &[Vec<u8>], start_id: u32) -> Vec<ChunkInfo> {
+pub fn chunks_to_chunk_info(chunks: &[Vec<u8>]) -> Vec<ChunkInfo> {
     chunks
         .iter()
         .enumerate()
         .map(|(i, data)| ChunkInfo {
-            chunk_id: start_id + i as u32,
+            chunk_id: i as u32,
             data: data.clone(),
             size: data.len(),
         })
@@ -455,5 +455,147 @@ mod tests {
         let result = chunk_with_id_to_candid_args(5, &test_data);
         let expected = r#"(5 : nat32, blob "\FF")"#;
         assert_eq!(result, expected);
+    }
+    
+    #[test]
+    fn test_chunk_info_sequential_ids() {
+        let chunks = vec![
+            vec![1, 2, 3],
+            vec![4, 5, 6],
+            vec![7, 8, 9],
+            vec![10, 11, 12],
+        ];
+
+        let chunk_infos = chunks_to_chunk_info(&chunks);
+
+        // Verify IDs are sequential starting from 0
+        assert_eq!(chunk_infos.len(), 4);
+        assert_eq!(chunk_infos[0].chunk_id, 0);
+        assert_eq!(chunk_infos[1].chunk_id, 1);
+        assert_eq!(chunk_infos[2].chunk_id, 2);
+        assert_eq!(chunk_infos[3].chunk_id, 3);
+
+        // Verify data is preserved
+        assert_eq!(chunk_infos[0].data, vec![1, 2, 3]);
+        assert_eq!(chunk_infos[3].data, vec![10, 11, 12]);
+    }
+
+    #[test]
+    fn test_resume_logic_skips_correct_chunks() {
+        let chunks = vec![
+            vec![1, 2, 3],    // chunk_id: 0
+            vec![4, 5, 6],    // chunk_id: 1
+            vec![7, 8, 9],    // chunk_id: 2
+            vec![10, 11, 12], // chunk_id: 3
+            vec![13, 14, 15], // chunk_id: 4
+        ];
+
+        let chunk_infos = chunks_to_chunk_info(&chunks);
+
+        // Simulate resuming from chunk offset 2 (should start from chunk_id 2)
+        let chunk_offset = 2;
+        let chunks_to_upload: Vec<_> = chunk_infos
+            .into_iter()
+            .skip(chunk_offset)
+            .collect();
+
+        // Should have 3 chunks remaining (IDs 2, 3, 4)
+        assert_eq!(chunks_to_upload.len(), 3);
+        assert_eq!(chunks_to_upload[0].chunk_id, 2);
+        assert_eq!(chunks_to_upload[1].chunk_id, 3);
+        assert_eq!(chunks_to_upload[2].chunk_id, 4);
+
+        // Verify the data matches
+        assert_eq!(chunks_to_upload[0].data, vec![7, 8, 9]);
+        assert_eq!(chunks_to_upload[2].data, vec![13, 14, 15]);
+    }
+
+    #[test]
+    fn test_retry_chunks_filter() {
+        let chunks = vec![
+            vec![1, 2],    // chunk_id: 0
+            vec![3, 4],    // chunk_id: 1
+            vec![5, 6],    // chunk_id: 2
+            vec![7, 8],    // chunk_id: 3
+            vec![9, 10],   // chunk_id: 4
+        ];
+
+        let chunk_infos = chunks_to_chunk_info(&chunks);
+
+        // Simulate retrying specific failed chunks: 1, 3
+        let retry_ids = vec![1u32, 3u32];
+        let chunks_to_upload: Vec<_> = chunk_infos
+            .into_iter()
+            .filter(|chunk| retry_ids.contains(&chunk.chunk_id))
+            .collect();
+
+        // Should have exactly 2 chunks
+        assert_eq!(chunks_to_upload.len(), 2);
+        assert_eq!(chunks_to_upload[0].chunk_id, 1);
+        assert_eq!(chunks_to_upload[1].chunk_id, 3);
+
+        // Verify the data matches
+        assert_eq!(chunks_to_upload[0].data, vec![3, 4]);
+        assert_eq!(chunks_to_upload[1].data, vec![7, 8]);
+    }
+
+    #[test]
+    fn test_no_double_offset_bug() {
+        // This test specifically verifies the bug is fixed
+        let chunks = vec![
+            vec![0],  // chunk_id: 0
+            vec![1],  // chunk_id: 1
+            vec![2],  // chunk_id: 2
+            vec![3],  // chunk_id: 3
+            vec![4],  // chunk_id: 4
+        ];
+
+        let chunk_offset = 2;
+        let chunk_infos = chunks_to_chunk_info(&chunks); // Start IDs from 0
+
+        // Apply resume logic (skip first chunk_offset chunks)
+        let chunks_to_upload: Vec<_> = chunk_infos
+            .into_iter()
+            .skip(chunk_offset)
+            .collect();
+
+        // Should start from chunk_id 2 (not 4 like the bug would cause)
+        assert_eq!(chunks_to_upload[0].chunk_id, 2);
+        assert_eq!(chunks_to_upload[0].data, vec![2]);
+
+        // Should have 3 chunks total (IDs 2, 3, 4)
+        assert_eq!(chunks_to_upload.len(), 3);
+        assert_eq!(chunks_to_upload[2].chunk_id, 4);
+    }
+
+    #[test]
+    fn test_edge_case_resume_from_last_chunk() {
+        let chunks = vec![vec![1], vec![2], vec![3]];
+        let chunk_infos = chunks_to_chunk_info(&chunks);
+
+        // Resume from the last chunk
+        let chunks_to_upload: Vec<_> = chunk_infos
+            .into_iter()
+            .skip(2)
+            .collect();
+
+        assert_eq!(chunks_to_upload.len(), 1);
+        assert_eq!(chunks_to_upload[0].chunk_id, 2);
+        assert_eq!(chunks_to_upload[0].data, vec![3]);
+    }
+
+    #[test]
+    fn test_edge_case_resume_beyond_chunks() {
+        let chunks = vec![vec![1], vec![2]];
+        let chunk_infos = chunks_to_chunk_info(&chunks);
+
+        // Try to resume beyond available chunks
+        let chunks_to_upload: Vec<_> = chunk_infos
+            .into_iter()
+            .skip(5)  // Skip more than available
+            .collect();
+
+        // Should result in empty vector
+        assert_eq!(chunks_to_upload.len(), 0);
     }
 }
