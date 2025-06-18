@@ -155,10 +155,16 @@ fn main() -> Result<(), String> {
                     match retry_ids {
                         Ok(ids) => {
                             println!("Retrying chunks: {:?}", ids);
-                            chunk_infos
+                            let filtered: Vec<_> = chunk_infos
                                 .into_iter()
                                 .filter(|chunk| ids.contains(&chunk.chunk_id))
-                                .collect()
+                                .collect();
+
+                            if filtered.is_empty() {
+                                return Err("No chunks to upload after applying chunk offset".to_string());
+                            }
+
+                            filtered
                         }
                         Err(e) => {
                             return Err(format!("Failed to parse chunk IDs from {}: {}", retry_file, e));

@@ -215,7 +215,7 @@ pub fn upload_chunk_with_config(
     config: &UploadConfig,
 ) -> Result<(), String> {
     let mut attempts = 0;
-    let max_attempts = if config.auto_resume { config.max_retries } else { 1 };
+    let max_attempts = config.max_retries;
 
     loop {
         attempts += 1;

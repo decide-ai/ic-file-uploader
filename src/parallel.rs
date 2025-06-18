@@ -349,6 +349,13 @@ pub fn upload_chunks_parallel(
         // Process completed uploads
         for (index, chunk_id) in completed_handles.into_iter().rev() {
             let (_, handle) = handles.remove(index);
+
+            // Always decrement active_uploads when a thread completes
+            {
+                let mut tracker = tracker.lock().unwrap();
+                tracker.active_uploads -= 1;
+            }
+
             match handle.join() {
                 Ok(Ok(())) => {
                     successful_chunks.push(chunk_id);
