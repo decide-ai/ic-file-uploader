@@ -456,7 +456,7 @@ mod tests {
         let expected = r#"(5 : nat32, blob "\FF")"#;
         assert_eq!(result, expected);
     }
-    
+
     #[test]
     fn test_chunk_info_sequential_ids() {
         let chunks = vec![

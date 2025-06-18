@@ -150,7 +150,7 @@ pub fn vec_u8_to_blob_string(data: &[u8]) -> String {
 /// A `Result` indicating success (`Ok(())`) or an error message (`Err(String)`).
 pub fn upload_chunk(name: &str,
     canister_name: &str,
-    bytecode_chunk: &Vec<u8>,
+    bytecode_chunk: &[u8],
     canister_method_name: &str,
     chunk_number: usize,
     chunk_total: usize,
@@ -223,7 +223,7 @@ pub fn upload_chunk_with_config(
         match upload_chunk(
             params.name,
             params.canister_name,
-            &chunk.to_vec(),
+            chunk,
             params.canister_method,
             chunk_index,
             total_chunks,
