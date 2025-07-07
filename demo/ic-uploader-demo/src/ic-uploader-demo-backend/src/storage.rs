@@ -118,9 +118,7 @@ pub fn remove_parallel_chunk(chunk_id: u32) -> bool {
 pub fn save_to_stable(key: String) -> Result<(), String> {
     let data = BUFFER.with(|buffer| {
         let mut buffer = buffer.borrow_mut();
-        let data = buffer.clone();
-        buffer.clear();
-        data
+        std::mem::take(&mut *buffer)
     });
 
     if data.is_empty() {
@@ -196,9 +194,7 @@ pub fn load_from_stable(key: String) -> Result<(), String> {
 pub fn get_data() -> Vec<u8> {
     BUFFER.with(|buffer| {
         let mut buffer = buffer.borrow_mut();
-        let data = buffer.clone();
-        buffer.clear();
-        data
+        std::mem::take(&mut *buffer)
     })
 }
 
