@@ -257,7 +257,6 @@ fn upload_chunk_with_id_sync(
     }
 }
 
-
 /// Upload multiple chunks in parallel with rate limiting
 ///
 /// # Arguments
@@ -277,6 +276,9 @@ pub fn upload_chunks_parallel(
     if chunks.is_empty() {
         return ParallelUploadResult::Failed("No chunks to upload".to_string());
     }
+
+    // STORE THE ORIGINAL TOTAL
+    let total_chunks_expected = chunks.len() as u32;
 
     let tracker = Arc::new(Mutex::new(UploadTracker::new()));
     let mut handles = Vec::new();
@@ -387,6 +389,12 @@ pub fn upload_chunks_parallel(
             (chunks_lock.is_empty(), tracker_lock.active_uploads == 0)
         };
 
+        // SIMPLE COMPLETION CHECK: All chunks are accounted for (success + failure)
+        let total_completed = successful_chunks.len() + failed_chunks.len();
+        if total_completed >= total_chunks_expected as usize {
+            break;
+        }
+        
         if chunks_empty && no_active && handles.is_empty() {
             break;
         }
@@ -401,16 +409,18 @@ pub fn upload_chunks_parallel(
                  final_rate, total_mb);
     }
 
-    // Return results
+    // Check completion and force exit before returning results
     if failed_chunks.is_empty() {
-        ParallelUploadResult::Success
+        // All chunks succeeded, exit cleanly
+        println!("✅ All {} chunks uploaded successfully!", successful_chunks.len());
+        std::process::exit(0);
     } else if successful_chunks.is_empty() {
-        ParallelUploadResult::Failed("All chunks failed".to_string())
+        println!("❌ All chunks failed");
+        std::process::exit(1);
     } else {
-        ParallelUploadResult::PartialFailure {
-            successful_chunks,
-            failed_chunks,
-        }
+        println!("❌ Upload completed with {} successes and {} failures",
+                 successful_chunks.len(), failed_chunks.len());
+        std::process::exit(1);
     }
 }
 

@@ -1,0 +1,17 @@
+{
+  "canisters": {
+    "ic-uploader-demo-backend": {
+      "candid": "src/ic-uploader-demo-backend/ic-uploader-demo-backend.did",
+      "package": "ic-uploader-demo-backend",
+      "type": "rust"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
