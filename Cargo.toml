@@ -1,6 +1,6 @@
 [package]
 name = "ic-file-uploader"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["Jeshli <Jeshli.Eth@gmail.com>"]
 edition = "2021"
 description = "A utility for uploading files larger than 2MB to Internet Computer canisters."
@@ -9,6 +9,12 @@ repository = "https://github.com/modclub-app/ic-file-uploader"
 homepage = "https://github.com/modclub-app/ic-file-uploader"
 documentation = "https://docs.rs/ic-file-uploader"
 readme = "README.md"
+
+exclude = [
+    "demo/",
+    "target/",
+    ".github/",
+]
 
 [dependencies]
 clap = { version = "4.5.9", features = ["derive"] }

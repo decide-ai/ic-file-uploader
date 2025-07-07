@@ -1,0 +1,8 @@
+[workspace]
+members = [
+    "src/ic-uploader-demo-backend"
+]
+resolver = "2"
+
+[workspace.package]
+publish = false
