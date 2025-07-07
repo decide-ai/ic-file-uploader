@@ -16,6 +16,7 @@ thread_local! {
 // ─────────────────────────────────────────────────────
 
 /// Append chunk to the single heap buffer
+#[ic_cdk::update]
 pub fn append_chunk(chunk: Vec<u8>) {
     BUFFER.with(|buffer| {
         buffer.borrow_mut().extend(chunk);
@@ -90,51 +91,6 @@ pub fn parallel_chunks_complete(expected_count: u32) -> bool {
         }
         true
     })
-}
-
-/// Consolidate parallel chunks into the main buffer (in chunk ID order)
-/// This moves data from BUFFER_MAP to BUFFER and clears BUFFER_MAP
-#[ic_cdk::update]
-pub fn consolidate_parallel_chunks() -> Result<usize, String> {
-    let (chunk_data, total_size) = BUFFER_MAP.with(|buffer_map| {
-        let mut buffer_map = buffer_map.borrow_mut();
-
-        if buffer_map.is_empty() {
-            return (Vec::new(), 0);
-        }
-
-        // Sort chunk IDs and collect data in order
-        let mut sorted_ids: Vec<u32> = buffer_map.keys().copied().collect();
-        sorted_ids.sort();
-
-        let mut consolidated_data = Vec::new();
-        let mut total_size = 0;
-
-        for chunk_id in sorted_ids {
-            if let Some(chunk) = buffer_map.remove(&chunk_id) {
-                total_size += chunk.len();
-                consolidated_data.extend(chunk);
-            }
-        }
-
-        // Clear the map after consolidation
-        buffer_map.clear();
-
-        (consolidated_data, total_size)
-    });
-
-    if chunk_data.is_empty() {
-        return Err("No parallel chunks to consolidate".to_string());
-    }
-
-    // Move consolidated data to main buffer
-    BUFFER.with(|buffer| {
-        let mut buffer = buffer.borrow_mut();
-        buffer.clear(); // Clear existing buffer
-        buffer.extend(chunk_data);
-    });
-
-    Ok(total_size)
 }
 
 /// Clear all parallel chunks
