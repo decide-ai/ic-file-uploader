@@ -394,7 +394,7 @@ pub fn upload_chunks_parallel(
         if total_completed >= total_chunks_expected as usize {
             break;
         }
-        
+
         if chunks_empty && no_active && handles.is_empty() {
             break;
         }
